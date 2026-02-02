@@ -1,0 +1,235 @@
+openapi: 3.0.3
+info:
+  title: Browser International Calls Platform API
+  description: |
+    Backend API для платформы международных звонков через браузер.
+    Обеспечивает аутентификацию пользователей, инициализацию звонков,
+    хранение истории и взаимодействие с VoIP/WebRTC-сервисом.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: Auth
+    description: Аутентификация и управление сессией
+  - name: Calls
+    description: Управление звонками
+  - name: History
+    description: История звонков
+  - name: System
+    description: Системные проверки
+
+paths:
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Регистрация пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Пользователь успешно зарегистрирован
+        "400":
+          description: Некорректные данные
+        "409":
+          description: Пользователь уже существует
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Вход пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Успешная аутентификация
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Неверные учетные данные
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Выход пользователя
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Успешный выход
+
+  /calls/start:
+    post:
+      tags: [Calls]
+      summary: Инициация звонка
+      description: |
+        Создает запись звонка и возвращает параметры для установки WebRTC-соединения.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartCallRequest"
+      responses:
+        "200":
+          description: Звонок инициирован
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StartCallResponse"
+        "400":
+          description: Некорректные данные
+        "401":
+          description: Неавторизован
+
+  /calls/end:
+    post:
+      tags: [Calls]
+      summary: Завершение звонка
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EndCallRequest"
+      responses:
+        "200":
+          description: Звонок завершен
+        "404":
+          description: Звонок не найден
+
+  /calls/history:
+    get:
+      tags: [History]
+      summary: Получение истории звонков
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: История звонков пользователя
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CallHistoryItem"
+
+  /system/health:
+    get:
+      tags: [System]
+      summary: Проверка состояния сервиса
+      responses:
+        "200":
+          description: Сервис доступен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: JWT токен доступа
+
+    StartCallRequest:
+      type: object
+      required: [countryCode, phoneNumber]
+      properties:
+        countryCode:
+          type: string
+          example: "+49"
+        phoneNumber:
+          type: string
+          example: "15123456789"
+
+    StartCallResponse:
+      type: object
+      properties:
+        callId:
+          type: string
+        rtcConfig:
+          type: object
+          description: |
+            Параметры для установки WebRTC-соединения
+          additionalProperties: true
+
+    EndCallRequest:
+      type: object
+      required: [callId]
+      properties:
+        callId:
+          type: string
+
+    CallHistoryItem:
+      type: object
+      properties:
+        callId:
+          type: string
+        phoneNumber:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        durationSeconds:
+          type: integer
+        status:
+          type: string
+          enum: [completed, failed, canceled]
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
