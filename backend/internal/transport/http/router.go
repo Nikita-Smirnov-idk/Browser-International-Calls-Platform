@@ -7,16 +7,18 @@ import (
 )
 
 type Router struct {
-	auth    *handlers.AuthHandler
-	calls   *handlers.CallsHandler
-	history *handlers.HistoryHandler
+	auth       *handlers.AuthHandler
+	calls      *handlers.CallsHandler
+	history    *handlers.HistoryHandler
+	jwtService middleware.JWTService
 }
 
-func NewRouter(auth *handlers.AuthHandler, calls *handlers.CallsHandler, history *handlers.HistoryHandler) *Router {
+func NewRouter(auth *handlers.AuthHandler, calls *handlers.CallsHandler, history *handlers.HistoryHandler, jwtService middleware.JWTService) *Router {
 	return &Router{
-		auth:    auth,
-		calls:   calls,
-		history: history,
+		auth:       auth,
+		calls:      calls,
+		history:    history,
+		jwtService: jwtService,
 	}
 }
 
@@ -26,18 +28,21 @@ func (r *Router) Setup(engine *gin.Engine) {
 
 	engine.GET("/system/health", handlers.Health)
 
-	authGroup := engine.Group("/auth")
+	api := engine.Group("/api")
 	{
-		authGroup.POST("/register", r.auth.Register)
-		authGroup.POST("/login", r.auth.Login)
-		authGroup.POST("/logout", middleware.Auth(), r.auth.Logout)
-	}
+		authGroup := api.Group("/auth")
+		{
+			authGroup.POST("/register", r.auth.Register)
+			authGroup.POST("/login", r.auth.Login)
+			authGroup.POST("/logout", middleware.Auth(r.jwtService), r.auth.Logout)
+		}
 
-	apiGroup := engine.Group("/calls")
-	apiGroup.Use(middleware.Auth())
-	{
-		apiGroup.POST("/start", r.calls.Start)
-		apiGroup.POST("/end", r.calls.End)
-		apiGroup.GET("/history", r.history.List)
+		callsGroup := api.Group("/calls")
+		callsGroup.Use(middleware.Auth(r.jwtService))
+		{
+			callsGroup.POST("", r.calls.Create)
+			callsGroup.PUT("/:id", r.calls.Update)
+			callsGroup.GET("/history", r.history.List)
+		}
 	}
 }

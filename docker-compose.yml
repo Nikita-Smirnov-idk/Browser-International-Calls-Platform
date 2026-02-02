@@ -27,6 +27,7 @@ services:
       POSTGRES_USER: calls
       POSTGRES_PASSWORD: calls
       POSTGRES_DB: calls
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-key-for-local-development}
     ports:
       - "8080:8080"
     depends_on:

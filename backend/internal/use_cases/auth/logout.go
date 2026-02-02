@@ -1,6 +1,9 @@
 package auth
 
-import "context"
+import (
+	"context"
+	"log/slog"
+)
 
 type LogoutInput struct {
 	UserID string
@@ -14,6 +17,6 @@ func NewLogoutUseCase() *LogoutUseCase {
 }
 
 func (uc *LogoutUseCase) Execute(ctx context.Context, input LogoutInput) error {
-	_ = input
+	slog.Info("user logged out", "user_id", input.UserID)
 	return nil
 }
