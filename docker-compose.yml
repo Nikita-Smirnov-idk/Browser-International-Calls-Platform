@@ -40,7 +40,7 @@ services:
       dockerfile: Dockerfile
     container_name: calls-frontend
     ports:
-      - "80:80"
+      - "1573:80"
     depends_on:
       - backend
 
