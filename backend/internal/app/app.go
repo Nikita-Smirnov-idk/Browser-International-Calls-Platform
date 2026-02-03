@@ -60,9 +60,9 @@ func New(cfg *config.Config) (*App, error) {
 	if cfg.VoIP.APIKeySid != "" && cfg.VoIP.APIKeySecret != "" && cfg.VoIP.TwimlAppSid != "" {
 		voiceTokenGen, err = voip.NewTokenGenerator(&voip.TokenConfig{
 			AccountSid:   cfg.VoIP.AccountSID,
-			APIKeySid:   cfg.VoIP.APIKeySid,
+			APIKeySid:    cfg.VoIP.APIKeySid,
 			APIKeySecret: cfg.VoIP.APIKeySecret,
-			TwimlAppSid: cfg.VoIP.TwimlAppSid,
+			TwimlAppSid:  cfg.VoIP.TwimlAppSid,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize voice token generator: %w", err)
@@ -89,9 +89,9 @@ func New(cfg *config.Config) (*App, error) {
 	webrtcHandler := handlers.NewWebRTCHandler(initiateCallUC, terminateCallUC)
 	var voiceHandler *handlers.VoiceHandler
 	if voiceTokenGen != nil {
-		voiceHandler = handlers.NewVoiceHandler(voiceTokenGen)
+		voiceHandler = handlers.NewVoiceHandler(voiceTokenGen, cfg.VoIP.VoicePublicBaseURL, cfg.VoIP.FromNumber)
 	} else {
-		voiceHandler = handlers.NewVoiceHandler(nil)
+		voiceHandler = handlers.NewVoiceHandler(nil, "", "")
 	}
 	historyHandler := handlers.NewHistoryHandler(listHistoryUC)
 
@@ -126,7 +126,7 @@ func findMigrationsPath() string {
 		"backend/migrations",
 		"./backend/migrations",
 	}
-	
+
 	for _, path := range possiblePaths {
 		if info, err := os.Stat(path); err == nil && info.IsDir() {
 			if files, err := os.ReadDir(path); err == nil {

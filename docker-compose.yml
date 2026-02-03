@@ -36,6 +36,7 @@ services:
       VOIP_API_KEY_SECRET: ${VOIP_API_KEY_SECRET:-}
       VOIP_FROM_NUMBER: ${VOIP_FROM_NUMBER:-}
       VOIP_TWIML_APP_SID: ${VOIP_TWIML_APP_SID:-}
+      VOICE_PUBLIC_BASE_URL: ${VOICE_PUBLIC_BASE_URL:-}
     ports:
       - "8080:8080"
     depends_on:

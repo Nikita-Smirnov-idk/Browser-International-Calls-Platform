@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Device, Call } from '@twilio/voice-sdk'
+import { Call as TwilioCall, Device } from '@twilio/voice-sdk'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocale } from '../i18n/LocaleContext'
 import { api } from '../api/client'
@@ -26,7 +26,7 @@ export function Call() {
   const [error, setError] = useState<string | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const deviceRef = useRef<Device | null>(null)
-  const activeCallRef = useRef<Call | null>(null)
+  const activeCallRef = useRef<TwilioCall | null>(null)
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
 
   const fullPhone = `${country.dialCode}${phoneNumber.replace(/\D/g, '')}`
@@ -54,7 +54,7 @@ export function Call() {
     return cleanup
   }, [cleanup])
 
-  const attachRemoteStream = useCallback((call: Call) => {
+  const attachRemoteStream = useCallback((call: TwilioCall) => {
     const el = remoteAudioRef.current
     if (!el) return
     const stream = call.getRemoteStream()
@@ -73,21 +73,24 @@ export function Call() {
       setCallId(res.call_id)
 
       if (res.voice_token) {
-        try {
-          const stream = await startLocalStream()
-          streamRef.current = stream
-        } catch (e) {
-          setError(t.noMicrophone)
-          setStatus('idle')
-          return
-        }
+        // Twilio Device сам управляет микрофоном — не вызываем startLocalStream,
+        // иначе два getUserMedia конкурируют и звук искажается (шипение)
         const device = new Device(res.voice_token, {
           logLevel: 0,
+          codecPreferences: [TwilioCall.Codec.Opus, TwilioCall.Codec.PCMU],
+          maxAverageBitrate: 32000,
         })
         deviceRef.current = device
         await device.register()
         const call = await device.connect({
           params: { To: fullPhone },
+          rtcConstraints: {
+            audio: {
+              echoCancellation: false,
+              noiseSuppression: false,
+              autoGainControl: false,
+            },
+          },
         })
         activeCallRef.current = call
         call.on('accept', () => {

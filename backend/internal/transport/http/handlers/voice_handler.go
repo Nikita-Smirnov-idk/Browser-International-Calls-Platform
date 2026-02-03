@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"log/slog"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -10,15 +12,21 @@ import (
 var e164Re = regexp.MustCompile(`^\+[1-9]\d{6,14}$`)
 
 type VoiceHandler struct {
-	tokenGenerator TokenGenerator
+	tokenGenerator     TokenGenerator
+	voicePublicBaseURL string
+	dialCallerID       string
 }
 
 type TokenGenerator interface {
 	GetToken(identity string, ttlSec int) (string, error)
 }
 
-func NewVoiceHandler(tokenGenerator TokenGenerator) *VoiceHandler {
-	return &VoiceHandler{tokenGenerator: tokenGenerator}
+func NewVoiceHandler(tokenGenerator TokenGenerator, voicePublicBaseURL, dialCallerID string) *VoiceHandler {
+	return &VoiceHandler{
+		tokenGenerator:     tokenGenerator,
+		voicePublicBaseURL: voicePublicBaseURL,
+		dialCallerID:       dialCallerID,
+	}
 }
 
 func (h *VoiceHandler) Token(c *gin.Context) {
@@ -53,21 +61,49 @@ func (h *VoiceHandler) TwiML(c *gin.Context) {
 	if to == "" {
 		to = c.Query("To")
 	}
+	slog.Info("twiml request from Twilio", "To", to, "method", c.Request.Method)
 	if to == "" || !e164Re.MatchString(to) {
+		slog.Warn("twiml invalid or missing To", "To", to)
 		c.Data(http.StatusOK, "application/xml", []byte(`<?xml version="1.0" encoding="UTF-8"?><Response><Say language="en-US">Invalid or missing phone number.</Say><Hangup/></Response>`))
 		return
 	}
 	escaped := escapeXML(to)
-	twiml := `<?xml version="1.0" encoding="UTF-8"?><Response><Dial><Number>` + escaped + `</Number></Dial></Response>`
-	c.Header("Content-Type", "application/xml")
+	var dialAttrs []string
+	if h.dialCallerID != "" && e164Re.MatchString(h.dialCallerID) {
+		dialAttrs = append(dialAttrs, `callerId="`+escapeXML(h.dialCallerID)+`"`)
+	}
+	if h.voicePublicBaseURL != "" {
+		statusURL := strings.TrimSuffix(h.voicePublicBaseURL, "/") + "/api/voice/status"
+		dialAttrs = append(dialAttrs, `statusCallback="`+escapeXML(statusURL)+`"`, `statusCallbackEvent="initiated ringing answered completed"`)
+	}
+	dialAttrStr := ""
+	if len(dialAttrs) > 0 {
+		dialAttrStr = " " + strings.Join(dialAttrs, " ")
+	}
+	twiml := `<?xml version="1.0" encoding="UTF-8"?><Response><Dial` + dialAttrStr + `><Number>` + escaped + `</Number></Dial></Response>`
+	c.Header("Content-Type", "application/xml; charset=utf-8")
 	c.String(http.StatusOK, twiml)
+	slog.Info("twiml returned Dial", "To", to)
+}
+
+func (h *VoiceHandler) VoiceStatusCallback(c *gin.Context) {
+	callSid := c.PostForm("CallSid")
+	dialCallStatus := c.PostForm("DialCallStatus")
+	callStatus := c.PostForm("CallStatus")
+	to := c.PostForm("To")
+	slog.Info("voice status callback from Twilio",
+		"CallSid", callSid,
+		"DialCallStatus", dialCallStatus,
+		"CallStatus", callStatus,
+		"To", to)
+	c.Status(http.StatusNoContent)
 }
 
 func escapeXML(s string) string {
 	const (
-		amp = "&amp;"
-		lt  = "&lt;"
-		gt  = "&gt;"
+		amp  = "&amp;"
+		lt   = "&lt;"
+		gt   = "&gt;"
 		quot = "&quot;"
 		apos = "&#39;"
 	)

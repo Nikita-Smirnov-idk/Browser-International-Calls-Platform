@@ -10,10 +10,10 @@ import (
 const defaultVoiceTokenTTL = 3600
 
 type TokenConfig struct {
-	AccountSid     string
-	APIKeySid      string
-	APIKeySecret   string
-	TwimlAppSid    string
+	AccountSid   string
+	APIKeySid    string
+	APIKeySecret string
+	TwimlAppSid  string
 }
 
 type TokenGenerator struct {
@@ -32,12 +32,12 @@ func (g *TokenGenerator) GetToken(identity string, ttlSec int) (string, error) {
 		ttlSec = defaultVoiceTokenTTL
 	}
 	params := jwt.AccessTokenParams{
-		AccountSid:   g.cfg.AccountSid,
+		AccountSid:    g.cfg.AccountSid,
 		SigningKeySid: g.cfg.APIKeySid,
-		Secret:       g.cfg.APIKeySecret,
-		Identity:     identity,
-		Ttl:          float64(ttlSec),
-		Nbf:          float64(time.Now().Unix()),
+		Secret:        g.cfg.APIKeySecret,
+		Identity:      identity,
+		Ttl:           float64(ttlSec),
+		Nbf:           float64(time.Now().Unix()),
 	}
 	token := jwt.CreateAccessToken(params)
 	voiceGrant := &jwt.VoiceGrant{

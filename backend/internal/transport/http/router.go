@@ -59,5 +59,6 @@ func (r *Router) Setup(engine *gin.Engine) {
 	if r.voice != nil {
 		engine.GET("/api/voice/twiml", r.voice.TwiML)
 		engine.POST("/api/voice/twiml", r.voice.TwiML)
+		engine.POST("/api/voice/status", r.voice.VoiceStatusCallback)
 	}
 }

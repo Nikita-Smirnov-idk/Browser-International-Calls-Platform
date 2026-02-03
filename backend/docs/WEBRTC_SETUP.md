@@ -126,7 +126,10 @@ VOIP_FROM_NUMBER=+1234567890
 VOIP_API_KEY_SID=SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 VOIP_API_KEY_SECRET=your_api_key_secret
 VOIP_TWIML_APP_SID=APxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+VOICE_PUBLIC_BASE_URL=https://ваш-туннель.euw.devtunnels.ms
 ```
+
+Переменная `VOICE_PUBLIC_BASE_URL` необязательна. Если задана, в TwiML для `<Dial>` добавляется `statusCallback`: Twilio будет вызывать ваш бэкенд при смене состояния дозвона (initiated, ringing, answered, completed). В логах появятся записи `voice status callback from Twilio` с полем `DialCallStatus` (completed, busy, no-answer, failed и т.д.) — это помогает понять, почему звонок не дошёл до телефона.
 
 После этого при инициации звонка бэкенд вернёт `voice_token`, фронтенд использует Twilio Voice SDK: браузер подключается к Twilio, Twilio по вашему TwiML URL дозванивается до номера и соединяет аудио. Вы слышите абонента в браузере, абонент слышит вас.
 
@@ -320,6 +323,30 @@ curl -X GET http://localhost:8080/api/calls/history \
 **Решение:**
 Убедитесь, что используете правильный JWT токен пользователя, который инициировал звонок.
 
+### Проблема: Звонок инициируется, но на телефон не приходит (слышу только гудки «тун-дун»)
+
+**Возможные причины и что проверить:**
+
+1. **Voice Request URL недоступен для Twilio**  
+   Twilio запрашивает TwiML по URL, указанному в TwiML App. Этот URL должен быть **публично доступен по HTTPS** (не `localhost`, не внутренний адрес Docker).  
+   - При использовании devtunnels/ngrok укажите в TwiML App URL вида: `https://ВАШ-ТУННЕЛЬ/api/voice/twiml`.  
+   - В логах бэкенда при звонке должны появляться строки: `twiml request from Twilio` и `twiml returned Dial`. Если их **нет** — Twilio не доходит до вашего бэкенда: проверьте URL в Twilio Console и что туннель проксирует `/api` на бэкенд.
+
+2. **Trial-аккаунт Twilio: только верифицированные номера**  
+   На бесплатном trial исходящие вызовы разрешены только на номера из **Verified Caller IDs**.  
+   - Twilio Console → **Phone Numbers → Manage → Verified Caller IDs** (или **Verify**).  
+   - Добавьте номер `+79653659793` (или тот, на который звоните) и пройдите верификацию (SMS/звонок).  
+   - Звоните только на этот верифицированный номер в формате E.164 (`+79653659793`).
+
+3. **География и права на исходящие**  
+   В Twilio Console проверьте, что для вашего аккаунта разрешены исходящие звонки в нужную страну (например, Россия). Для trial могут быть ограничения по странам.
+
+4. **Проверка в Twilio**  
+   В Twilio Console → **Monitor → Logs → Voice** посмотрите попытки вызова: статус, ошибки, доходит ли запрос до вашего TwiML URL.
+
+5. **Слышу «тун-дун» два раза, потом тишина**  
+   Часто это значит: Twilio начал дозвон (вы слышите гудки в браузере), но исходящий звонок к телефону завершился с ошибкой (например, trial — номер не в Verified Caller IDs, или отказ оператора). Задайте `VOICE_PUBLIC_BASE_URL` (публичный URL бэкенда без слэша в конце) и перезапустите бэкенд. После звонка в логах появятся вызовы `voice status callback from Twilio` с полем **DialCallStatus**: `no-answer`, `busy`, `failed`, `completed` и т.д. По нему видно причину (например, `failed` при ограничениях trial).
+
 ## Логи и отладка
 
 ### Включение debug логов
@@ -330,7 +357,12 @@ slog.SetLogLoggerLevel(slog.LevelDebug)
 
 ### Ключевые логи
 
-- "call initiated successfully" - звонок успешно инициирован
+- "call initiated with voice sdk" - звонок инициирован через Voice SDK (токен выдан, ожидается запрос TwiML от Twilio)
+- "twiml request from Twilio" - Twilio запросил TwiML (значит Voice URL доступен)
+- "twiml returned Dial" - бэкенд вернул TwiML с \<Dial\> на номер
+- "twiml invalid or missing To" - Twilio вызвал URL без корректного параметра To
+- "voice status callback from Twilio" - результат дозвона (DialCallStatus: completed, no-answer, busy, failed)
+- "call initiated successfully" - звонок инициирован (без Voice SDK)
 - "call terminated successfully" - звонок успешно завершен
 - "failed to initiate voip call" - ошибка VoIP сервиса
 - "unauthorized call termination attempt" - попытка завершить чужой звонок

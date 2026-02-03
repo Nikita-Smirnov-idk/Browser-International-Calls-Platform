@@ -30,13 +30,14 @@ type JWTConfig struct {
 }
 
 type VoIPConfig struct {
-	Provider       string
-	AccountSID     string
-	AuthToken      string
-	APIKeySid      string
-	APIKeySecret   string
-	FromNumber     string
-	TwimlAppSid    string
+	Provider           string
+	AccountSID         string
+	AuthToken          string
+	APIKeySid          string
+	APIKeySecret       string
+	FromNumber         string
+	TwimlAppSid        string
+	VoicePublicBaseURL string
 }
 
 func Load() (*Config, error) {
@@ -56,13 +57,14 @@ func Load() (*Config, error) {
 			Secret: getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
 		},
 		VoIP: VoIPConfig{
-			Provider:     getEnv("VOIP_PROVIDER", "twilio"),
-			AccountSID:   getEnv("VOIP_ACCOUNT_SID", ""),
-			AuthToken:   getEnv("VOIP_AUTH_TOKEN", ""),
-			APIKeySid:   getEnv("VOIP_API_KEY_SID", ""),
-			APIKeySecret: getEnv("VOIP_API_KEY_SECRET", ""),
-			FromNumber:  getEnv("VOIP_FROM_NUMBER", ""),
-			TwimlAppSid: getEnv("VOIP_TWIML_APP_SID", ""),
+			Provider:           getEnv("VOIP_PROVIDER", "twilio"),
+			AccountSID:         getEnv("VOIP_ACCOUNT_SID", ""),
+			AuthToken:          getEnv("VOIP_AUTH_TOKEN", ""),
+			APIKeySid:          getEnv("VOIP_API_KEY_SID", ""),
+			APIKeySecret:       getEnv("VOIP_API_KEY_SECRET", ""),
+			FromNumber:         getEnv("VOIP_FROM_NUMBER", ""),
+			TwimlAppSid:        getEnv("VOIP_TWIML_APP_SID", ""),
+			VoicePublicBaseURL: getEnv("VOICE_PUBLIC_BASE_URL", ""),
 		},
 	}
 
@@ -88,4 +90,3 @@ func getEnv(key, defaultValue string) string {
 	}
 	return defaultValue
 }
-
