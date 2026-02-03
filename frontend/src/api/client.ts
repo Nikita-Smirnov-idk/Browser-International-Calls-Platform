@@ -11,7 +11,7 @@ export interface LoginRequest {
 }
 
 export interface AuthResponse {
-  accessToken: string
+  token: string
 }
 
 export interface InitiateCallRequest {
@@ -24,6 +24,7 @@ export interface InitiateCallResponse {
   sdp_offer: string
   status: string
   start_time: string
+  voice_token?: string
 }
 
 export interface TerminateCallRequest {
@@ -84,7 +85,7 @@ async function request<T>(
 
 export const api = {
   register: (body: RegisterRequest) =>
-    request<void>('/api/auth/register', { method: 'POST', body: JSON.stringify(body) }),
+    request<AuthResponse>('/api/auth/register', { method: 'POST', body: JSON.stringify(body) }),
 
   login: (body: LoginRequest) =>
     request<AuthResponse>('/api/auth/login', { method: 'POST', body: JSON.stringify(body) }),

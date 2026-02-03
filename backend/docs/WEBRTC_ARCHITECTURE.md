@@ -151,7 +151,6 @@ API -> Frontend: 200 OK
 VOIP_PROVIDER=twilio              # или "mock" для разработки
 VOIP_ACCOUNT_SID=your-account-sid
 VOIP_AUTH_TOKEN=your-auth-token
-VOIP_API_KEY=your-api-key         # опционально
 VOIP_FROM_NUMBER=+1234567890      # номер от которого идут звонки
 ```
 

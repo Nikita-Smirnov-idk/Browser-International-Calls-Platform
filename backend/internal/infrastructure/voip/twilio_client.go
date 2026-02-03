@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/Nikita-Smirnov-idk/Browser-International-Calls-Platform/backend/internal/domain"
@@ -42,7 +43,7 @@ func NewTwilioClient(cfg *Config) (*TwilioClient, error) {
 
 func (c *TwilioClient) InitiateCall(ctx context.Context, phoneNumber string) (*domain.CallSession, error) {
 	if phoneNumber == "" {
-		return nil, ErrInvalidPhoneNumber
+		return nil, domain.ErrInvalidPhoneNumber
 	}
 
 	sessionID := generateSessionID()
@@ -55,6 +56,9 @@ func (c *TwilioClient) InitiateCall(ctx context.Context, phoneNumber string) (*d
 	resp, err := c.client.Api.CreateCall(params)
 	if err != nil {
 		slog.Error("failed to create twilio call", "error", err, "phone", phoneNumber)
+		if isTwilioInvalidNumberError(err) {
+			return nil, domain.ErrInvalidPhoneNumber
+		}
 		return nil, ErrVoIPServiceUnavailable
 	}
 
@@ -107,6 +111,14 @@ func (c *TwilioClient) Close() error {
 
 func generateSessionID() string {
 	return fmt.Sprintf("sess_%d", time.Now().UnixNano())
+}
+
+func isTwilioInvalidNumberError(err error) bool {
+	s := err.Error()
+	return strings.Contains(s, "21211") ||
+		strings.Contains(s, "21614") ||
+		strings.Contains(strings.ToLower(s), "not a valid") ||
+		strings.Contains(strings.ToLower(s), "invalid phone")
 }
 
 func generateMockSDP() string {

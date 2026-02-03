@@ -23,7 +23,6 @@ type Config struct {
 	Provider   string
 	AccountSID string
 	AuthToken  string
-	APIKey     string
 	FromNumber string
 }
 

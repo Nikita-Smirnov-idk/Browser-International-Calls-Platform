@@ -48,7 +48,7 @@ func (h *WebRTCHandler) Initiate(c *gin.Context) {
 		statusCode := http.StatusInternalServerError
 		errorMsg := err.Error()
 
-		if errorMsg == "phone_number is required" || errorMsg == "user_id is required" {
+		if errorMsg == "phone_number is required" || errorMsg == "user_id is required" || errorMsg == "invalid phone number" {
 			statusCode = http.StatusBadRequest
 		} else if errorMsg == "failed to initiate call" {
 			statusCode = http.StatusServiceUnavailable
@@ -61,13 +61,17 @@ func (h *WebRTCHandler) Initiate(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	resp := gin.H{
 		"call_id":    output.CallID,
 		"session_id": output.SessionID,
 		"sdp_offer":  output.SDPOffer,
 		"status":     output.Status,
 		"start_time": output.StartTime.Format("2006-01-02T15:04:05Z07:00"),
-	})
+	}
+	if output.VoiceToken != "" {
+		resp["voice_token"] = output.VoiceToken
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 func (h *WebRTCHandler) Terminate(c *gin.Context) {

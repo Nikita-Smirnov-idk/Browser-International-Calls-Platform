@@ -112,6 +112,50 @@ VOIP_FROM_NUMBER=+1234567890
 4. Купите номер телефона в разделе "Phone Numbers"
 5. Укажите купленный номер в `VOIP_FROM_NUMBER`
 
+#### Полноценный двусторонний разговор (Voice SDK)
+
+Чтобы в браузере и на телефоне слышать друг друга, нужны дополнительные настройки:
+
+1. **API Key** — в Twilio Console: Account → API keys & tokens → Create API Key. Сохраните **SID** и **Secret** (Secret показывается один раз).
+2. **TwiML App** — в Twilio Console: Develop → TwiML Apps → Create TwiML App. Укажите:
+   - **Friendly Name**: например `Browser Calls`
+   - **Voice Request URL**: публичный URL вашего бэкенда, например `https://ВАШ-ДОМЕН/api/voice/twiml` (для локальной разработки — см. раздел про ngrok ниже).
+3. В `.env` (или в переменных окружения для docker-compose) задайте:
+
+```env
+VOIP_API_KEY_SID=SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+VOIP_API_KEY_SECRET=your_api_key_secret
+VOIP_TWIML_APP_SID=APxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+После этого при инициации звонка бэкенд вернёт `voice_token`, фронтенд использует Twilio Voice SDK: браузер подключается к Twilio, Twilio по вашему TwiML URL дозванивается до номера и соединяет аудио. Вы слышите абонента в браузере, абонент слышит вас.
+
+#### Проверка на Trial-аккаунте
+
+На бесплатном trial-аккаунте Twilio исходящие звонки разрешены только на **верифицированные** номера.
+
+1. В Twilio Console откройте **Phone Numbers → Manage → Verified Caller IDs** (или **Verify** в боковом меню).
+2. Добавьте номер, на который планируете звонить (например второй телефон или номер друга), и пройдите верификацию по SMS/звонку.
+3. В приложении указывайте этот номер в формате E.164 (например `+79031234567`).
+
+После этого при нажатии «Позвонить» Twilio реально позвонит на указанный номер. При настроенном Voice SDK (см. выше) вы и абонент будете слышать друг друга.
+
+**Полноценный двусторонний разговор (голос из браузера к номеру и обратно)** требует настройки Voice SDK (API Key + TwiML App + публичный URL для TwiML). Без этого абонент услышит только демо TwiML, а голос из браузера не передаётся.
+
+#### Запуск через Docker Compose и проверка с trial
+
+1. В корне проекта создайте `.env` с переменными Twilio (в т.ч. `VOIP_API_KEY_SID`, `VOIP_API_KEY_SECRET`, `VOIP_TWIML_APP_SID` для двустороннего разговора).
+2. Запустите стек:
+
+```bash
+docker-compose up -d
+```
+
+3. Twilio должен вызывать ваш бэкенд по адресу **Voice Request URL** TwiML App. При локальной разработке бэкенд недоступен из интернета, поэтому нужен туннель:
+   - Установите [ngrok](https://ngrok.com/) и запустите туннель на порт, где доступно приложение (фронтенд проксирует `/api` на бэкенд). Например, если заходите на приложение по `http://localhost:1573`, запустите: `ngrok http 1573`.
+   - Скопируйте HTTPS-URL ngrok (например `https://abc123.ngrok.io`) и в Twilio Console в TwiML App укажите **Voice Request URL**: `https://abc123.ngrok.io/api/voice/twiml`.
+4. Откройте в браузере приложение (через ngrok-URL или `http://localhost:1573`), войдите, введите верифицированный номер и нажмите «Позвонить». Должен установиться полноценный голосовой звонок: вы слышите абонента в браузере, абонент слышит вас на телефоне.
+
 ## API Endpoints
 
 ### Инициация звонка
@@ -126,7 +170,7 @@ Content-Type: application/json
 }
 ```
 
-**Ответ:**
+**Ответ (без Voice SDK):**
 
 ```json
 {
@@ -135,6 +179,19 @@ Content-Type: application/json
   "sdp_offer": "v=0\no=- 0 0 IN IP4 127.0.0.1\n...",
   "status": "connecting",
   "start_time": "2026-02-03T12:34:56Z"
+}
+```
+
+**Ответ (с Voice SDK — при заданных VOIP_API_KEY_SID, VOIP_API_KEY_SECRET, VOIP_TWIML_APP_SID):**
+
+```json
+{
+  "call_id": "uuid",
+  "session_id": "voice_sdk",
+  "sdp_offer": "",
+  "status": "connecting",
+  "start_time": "2026-02-03T12:34:56Z",
+  "voice_token": "eyJ..."
 }
 ```
 

@@ -2,8 +2,11 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"time"
 )
+
+var ErrInvalidPhoneNumber = errors.New("invalid phone number")
 
 type VoIPService interface {
 	InitiateCall(ctx context.Context, phoneNumber string) (*CallSession, error)

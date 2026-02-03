@@ -21,6 +21,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: calls-backend
+    env_file: .env
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
@@ -28,6 +29,13 @@ services:
       POSTGRES_PASSWORD: calls
       POSTGRES_DB: calls
       JWT_SECRET: ${JWT_SECRET:-dev-secret-key-for-local-development}
+      VOIP_PROVIDER: ${VOIP_PROVIDER:-twilio}
+      VOIP_ACCOUNT_SID: ${VOIP_ACCOUNT_SID:-}
+      VOIP_AUTH_TOKEN: ${VOIP_AUTH_TOKEN:-}
+      VOIP_API_KEY_SID: ${VOIP_API_KEY_SID:-}
+      VOIP_API_KEY_SECRET: ${VOIP_API_KEY_SECRET:-}
+      VOIP_FROM_NUMBER: ${VOIP_FROM_NUMBER:-}
+      VOIP_TWIML_APP_SID: ${VOIP_TWIML_APP_SID:-}
     ports:
       - "8080:8080"
     depends_on:

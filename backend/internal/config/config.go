@@ -30,11 +30,13 @@ type JWTConfig struct {
 }
 
 type VoIPConfig struct {
-	Provider   string
-	AccountSID string
-	AuthToken  string
-	APIKey     string
-	FromNumber string
+	Provider       string
+	AccountSID     string
+	AuthToken      string
+	APIKeySid      string
+	APIKeySecret   string
+	FromNumber     string
+	TwimlAppSid    string
 }
 
 func Load() (*Config, error) {
@@ -54,11 +56,13 @@ func Load() (*Config, error) {
 			Secret: getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
 		},
 		VoIP: VoIPConfig{
-			Provider:   getEnv("VOIP_PROVIDER", "twilio"),
-			AccountSID: getEnv("VOIP_ACCOUNT_SID", ""),
-			AuthToken:  getEnv("VOIP_AUTH_TOKEN", ""),
-			APIKey:     getEnv("VOIP_API_KEY", ""),
-			FromNumber: getEnv("VOIP_FROM_NUMBER", ""),
+			Provider:     getEnv("VOIP_PROVIDER", "twilio"),
+			AccountSID:   getEnv("VOIP_ACCOUNT_SID", ""),
+			AuthToken:   getEnv("VOIP_AUTH_TOKEN", ""),
+			APIKeySid:   getEnv("VOIP_API_KEY_SID", ""),
+			APIKeySecret: getEnv("VOIP_API_KEY_SECRET", ""),
+			FromNumber:  getEnv("VOIP_FROM_NUMBER", ""),
+			TwimlAppSid: getEnv("VOIP_TWIML_APP_SID", ""),
 		},
 	}
 

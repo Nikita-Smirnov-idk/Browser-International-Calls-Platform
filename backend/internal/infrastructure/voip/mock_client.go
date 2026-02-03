@@ -25,7 +25,7 @@ func NewMockClient(cfg *Config) (*MockClient, error) {
 
 func (c *MockClient) InitiateCall(ctx context.Context, phoneNumber string) (*domain.CallSession, error) {
 	if phoneNumber == "" {
-		return nil, ErrInvalidPhoneNumber
+		return nil, domain.ErrInvalidPhoneNumber
 	}
 
 	sessionID := fmt.Sprintf("mock_sess_%d", time.Now().UnixNano())

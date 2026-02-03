@@ -69,7 +69,7 @@ func TestInitiateCallUseCase_Execute_Success(t *testing.T) {
 		},
 	}
 
-	uc := NewInitiateCallUseCase(mockRepo, mockVoIP)
+	uc := NewInitiateCallUseCase(mockRepo, mockVoIP, nil)
 
 	input := InitiateCallInput{
 		UserID:      "test-user-id",
@@ -115,7 +115,7 @@ func TestInitiateCallUseCase_Execute_MissingUserID(t *testing.T) {
 	mockRepo := &mockCallRepository{}
 	mockVoIP := &mockVoIPService{}
 
-	uc := NewInitiateCallUseCase(mockRepo, mockVoIP)
+	uc := NewInitiateCallUseCase(mockRepo, mockVoIP, nil)
 
 	input := InitiateCallInput{
 		UserID:      "",
@@ -141,7 +141,7 @@ func TestInitiateCallUseCase_Execute_MissingPhoneNumber(t *testing.T) {
 	mockRepo := &mockCallRepository{}
 	mockVoIP := &mockVoIPService{}
 
-	uc := NewInitiateCallUseCase(mockRepo, mockVoIP)
+	uc := NewInitiateCallUseCase(mockRepo, mockVoIP, nil)
 
 	input := InitiateCallInput{
 		UserID:      "test-user-id",
@@ -169,7 +169,7 @@ func TestInitiateCallUseCase_Execute_VoIPFailure(t *testing.T) {
 		initiateError: errors.New("voip service unavailable"),
 	}
 
-	uc := NewInitiateCallUseCase(mockRepo, mockVoIP)
+	uc := NewInitiateCallUseCase(mockRepo, mockVoIP, nil)
 
 	input := InitiateCallInput{
 		UserID:      "test-user-id",
@@ -206,7 +206,7 @@ func TestInitiateCallUseCase_Execute_RepositoryFailure(t *testing.T) {
 		},
 	}
 
-	uc := NewInitiateCallUseCase(mockRepo, mockVoIP)
+	uc := NewInitiateCallUseCase(mockRepo, mockVoIP, nil)
 
 	input := InitiateCallInput{
 		UserID:      "test-user-id",
@@ -228,3 +228,46 @@ func TestInitiateCallUseCase_Execute_RepositoryFailure(t *testing.T) {
 	}
 }
 
+type mockVoiceTokenGenerator struct {
+	token string
+	err   error
+}
+
+func (m *mockVoiceTokenGenerator) GetToken(identity string, ttlSec int) (string, error) {
+	if m.err != nil {
+		return "", m.err
+	}
+	return m.token, nil
+}
+
+func TestInitiateCallUseCase_Execute_VoiceSDK_Success(t *testing.T) {
+	mockRepo := &mockCallRepository{}
+	mockVoIP := &mockVoIPService{}
+	tokenGen := &mockVoiceTokenGenerator{token: "test-voice-token"}
+
+	uc := NewInitiateCallUseCase(mockRepo, mockVoIP, tokenGen)
+
+	input := InitiateCallInput{
+		UserID:      "test-user-id",
+		PhoneNumber: "+491512345678",
+	}
+
+	output, err := uc.Execute(context.Background(), input)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if output.CallID != "test-call-id" {
+		t.Errorf("expected call_id test-call-id, got %s", output.CallID)
+	}
+	if output.VoiceToken != "test-voice-token" {
+		t.Errorf("expected voice_token test-voice-token, got %s", output.VoiceToken)
+	}
+	if output.SessionID != "voice_sdk" {
+		t.Errorf("expected session_id voice_sdk, got %s", output.SessionID)
+	}
+	if mockRepo.createdCall == nil || mockRepo.createdCall.SessionID != "voice_sdk" {
+		t.Errorf("expected created call with session_id voice_sdk")
+	}
+}

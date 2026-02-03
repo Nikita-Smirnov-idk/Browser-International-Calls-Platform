@@ -50,11 +50,23 @@ func New(cfg *config.Config) (*App, error) {
 		Provider:   cfg.VoIP.Provider,
 		AccountSID: cfg.VoIP.AccountSID,
 		AuthToken:  cfg.VoIP.AuthToken,
-		APIKey:     cfg.VoIP.APIKey,
 		FromNumber: cfg.VoIP.FromNumber,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize voip client: %w", err)
+	}
+
+	var voiceTokenGen *voip.TokenGenerator
+	if cfg.VoIP.APIKeySid != "" && cfg.VoIP.APIKeySecret != "" && cfg.VoIP.TwimlAppSid != "" {
+		voiceTokenGen, err = voip.NewTokenGenerator(&voip.TokenConfig{
+			AccountSid:   cfg.VoIP.AccountSID,
+			APIKeySid:   cfg.VoIP.APIKeySid,
+			APIKeySecret: cfg.VoIP.APIKeySecret,
+			TwimlAppSid: cfg.VoIP.TwimlAppSid,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize voice token generator: %w", err)
+		}
 	}
 
 	jwtService := jwt.NewService(cfg.JWT.Secret)
@@ -64,16 +76,26 @@ func New(cfg *config.Config) (*App, error) {
 	logoutUC := auth.NewLogoutUseCase()
 	startCallUC := calls.NewStartCallUseCase(callRepo)
 	endCallUC := calls.NewEndCallUseCase(callRepo)
-	initiateCallUC := calls.NewInitiateCallUseCase(callRepo, voipClient)
+	var tokenGenForUC calls.VoiceTokenGenerator
+	if voiceTokenGen != nil {
+		tokenGenForUC = voiceTokenGen
+	}
+	initiateCallUC := calls.NewInitiateCallUseCase(callRepo, voipClient, tokenGenForUC)
 	terminateCallUC := calls.NewTerminateCallUseCase(callRepo, voipClient)
 	listHistoryUC := history.NewListHistoryUseCase(callRepo)
 
 	authHandler := handlers.NewAuthHandler(registerUC, loginUC, logoutUC, jwtService)
 	callsHandler := handlers.NewCallsHandler(startCallUC, endCallUC)
 	webrtcHandler := handlers.NewWebRTCHandler(initiateCallUC, terminateCallUC)
+	var voiceHandler *handlers.VoiceHandler
+	if voiceTokenGen != nil {
+		voiceHandler = handlers.NewVoiceHandler(voiceTokenGen)
+	} else {
+		voiceHandler = handlers.NewVoiceHandler(nil)
+	}
 	historyHandler := handlers.NewHistoryHandler(listHistoryUC)
 
-	router := http.NewRouter(authHandler, callsHandler, webrtcHandler, historyHandler, jwtService)
+	router := http.NewRouter(authHandler, callsHandler, webrtcHandler, voiceHandler, historyHandler, jwtService)
 
 	return &App{
 		userRepo:   userRepo,

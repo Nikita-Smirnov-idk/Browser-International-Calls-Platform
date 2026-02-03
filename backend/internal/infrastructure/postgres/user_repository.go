@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/Nikita-Smirnov-idk/Browser-International-Calls-Platform/backend/internal/domain"
 	"gorm.io/gorm"
@@ -20,7 +21,7 @@ type userModel struct {
 	ID           string `gorm:"column:id;primaryKey;type:uuid;default:gen_random_uuid()"`
 	Email        string `gorm:"column:email;uniqueIndex;not null"`
 	PasswordHash string `gorm:"column:password_hash;not null"`
-	CreatedAt    string `gorm:"column:created_at;autoCreateTime"`
+	CreatedAt    time.Time `gorm:"column:created_at;autoCreateTime"`
 }
 
 func (userModel) TableName() string {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Device, Call } from '@twilio/voice-sdk'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocale } from '../i18n/LocaleContext'
 import { api } from '../api/client'
@@ -24,6 +25,9 @@ export function Call() {
   const [callId, setCallId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const deviceRef = useRef<Device | null>(null)
+  const activeCallRef = useRef<Call | null>(null)
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
 
   const fullPhone = `${country.dialCode}${phoneNumber.replace(/\D/g, '')}`
   const canCall =
@@ -35,6 +39,14 @@ export function Call() {
       streamRef.current.getTracks().forEach((tr) => tr.stop())
       streamRef.current = null
     }
+    if (activeCallRef.current) {
+      activeCallRef.current.disconnect()
+      activeCallRef.current = null
+    }
+    if (deviceRef.current) {
+      deviceRef.current.destroy()
+      deviceRef.current = null
+    }
     cleanupWebRTC()
   }, [cleanupWebRTC])
 
@@ -42,32 +54,84 @@ export function Call() {
     return cleanup
   }, [cleanup])
 
+  const attachRemoteStream = useCallback((call: Call) => {
+    const el = remoteAudioRef.current
+    if (!el) return
+    const stream = call.getRemoteStream()
+    if (stream) {
+      el.srcObject = stream
+      el.play().catch(() => {})
+    }
+  }, [])
+
   const handleStartCall = useCallback(async () => {
     if (!token) return
     setError(null)
     setStatus('connecting')
     try {
-      let stream: MediaStream | null = null
-      try {
-        stream = await startLocalStream()
-        streamRef.current = stream
-      } catch (e) {
-        setError(t.noMicrophone)
-        setStatus('idle')
-        return
-      }
       const res = await api.initiateCall(token, { phone_number: fullPhone })
       setCallId(res.call_id)
-      setStatus('talking')
+
+      if (res.voice_token) {
+        try {
+          const stream = await startLocalStream()
+          streamRef.current = stream
+        } catch (e) {
+          setError(t.noMicrophone)
+          setStatus('idle')
+          return
+        }
+        const device = new Device(res.voice_token, {
+          logLevel: 0,
+        })
+        deviceRef.current = device
+        await device.register()
+        const call = await device.connect({
+          params: { To: fullPhone },
+        })
+        activeCallRef.current = call
+        call.on('accept', () => {
+          setStatus('talking')
+          attachRemoteStream(call)
+        })
+        call.on('disconnect', () => {
+          activeCallRef.current = null
+        })
+        call.on('volume', () => {
+          attachRemoteStream(call)
+        })
+        call.on('error', () => {
+          setError(t.connectionError)
+          setStatus('idle')
+          cleanup()
+        })
+      } else {
+        try {
+          await startLocalStream()
+        } catch (e) {
+          setError(t.noMicrophone)
+          setStatus('idle')
+          return
+        }
+        setStatus('talking')
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : t.connectionError)
       setStatus('idle')
       cleanup()
     }
-  }, [token, country, fullPhone, startLocalStream, t.noMicrophone, t.connectionError, cleanup])
+  }, [token, country, fullPhone, startLocalStream, t.noMicrophone, t.connectionError, cleanup, attachRemoteStream])
 
   const handleEndCall = useCallback(async () => {
     if (!token) return
+    if (activeCallRef.current) {
+      activeCallRef.current.disconnect()
+      activeCallRef.current = null
+    }
+    if (deviceRef.current) {
+      deviceRef.current.destroy()
+      deviceRef.current = null
+    }
     if (callId) {
       try {
         await api.terminateCall(token, { call_id: callId })
@@ -96,6 +160,7 @@ export function Call() {
 
   return (
     <Layout>
+      <audio ref={remoteAudioRef} autoPlay playsInline aria-hidden />
       <div className={styles.page}>
         <h1>{t.call}</h1>
 

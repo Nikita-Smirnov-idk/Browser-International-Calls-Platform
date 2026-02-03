@@ -87,7 +87,7 @@ docker-compose up backend
 
 ### Локально
 
-1. Установите переменные окружения:
+1. Создайте файл `backend/.env` с переменными (приложение загружает его автоматически):
 ```bash
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
@@ -96,16 +96,26 @@ POSTGRES_PASSWORD=calls
 POSTGRES_DB=calls
 JWT_SECRET=your-secret-key
 SERVER_PORT=8080
+VOIP_PROVIDER=twilio
+VOIP_ACCOUNT_SID=your_twilio_account_sid
+VOIP_AUTH_TOKEN=your_twilio_auth_token
+VOIP_FROM_NUMBER=+1234567890
 ```
 
-2. Запустите сервер:
+2. Установите зависимости и запустите сервер:
 ```bash
 cd backend
 go mod tidy
-go run cmd/server/main.go
+go run ./cmd/server/
 ```
 
 Сервер доступен на `http://localhost:8080`.
+
+### Где создавать файл `.env`
+
+- **Запуск через Docker Compose** (`docker compose up`): создайте `.env` в **корне проекта** (рядом с `docker-compose.yml`). Compose подставит переменные в контейнер.
+- **Локальный запуск** (`go run ./cmd/server/`): создайте `.env` в папке **`backend/`** — приложение загрузит его при старте.
+- После добавления зависимости выполните один раз: `go mod tidy`.
 
 ## API Endpoints
 

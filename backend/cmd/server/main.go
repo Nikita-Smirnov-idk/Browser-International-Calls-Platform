@@ -14,9 +14,15 @@ import (
 	"github.com/Nikita-Smirnov-idk/Browser-International-Calls-Platform/backend/internal/app"
 	"github.com/Nikita-Smirnov-idk/Browser-International-Calls-Platform/backend/internal/config"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	_ = godotenv.Load(".env")
+	if _, err := os.Stat("backend/.env"); err == nil {
+		_ = godotenv.Load("backend/.env")
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)

@@ -30,9 +30,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     setError(null)
     try {
-      const { accessToken } = await api.login({ email, password })
-      localStorage.setItem(TOKEN_KEY, accessToken)
-      setToken(accessToken)
+      const res = await api.login({ email, password })
+      localStorage.setItem(TOKEN_KEY, res.token)
+      setToken(res.token)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Login failed')
       throw e
@@ -42,13 +42,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(async (email: string, password: string) => {
     setError(null)
     try {
-      await api.register({ email, password })
-      await login(email, password)
+      const res = await api.register({ email, password })
+      localStorage.setItem(TOKEN_KEY, res.token)
+      setToken(res.token)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Registration failed')
       throw e
     }
-  }, [login])
+  }, [])
 
   const logout = useCallback(async () => {
     if (token) {

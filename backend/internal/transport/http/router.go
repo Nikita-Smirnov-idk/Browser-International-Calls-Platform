@@ -10,15 +10,17 @@ type Router struct {
 	auth       *handlers.AuthHandler
 	calls      *handlers.CallsHandler
 	webrtc     *handlers.WebRTCHandler
+	voice      *handlers.VoiceHandler
 	history    *handlers.HistoryHandler
 	jwtService middleware.JWTService
 }
 
-func NewRouter(auth *handlers.AuthHandler, calls *handlers.CallsHandler, webrtc *handlers.WebRTCHandler, history *handlers.HistoryHandler, jwtService middleware.JWTService) *Router {
+func NewRouter(auth *handlers.AuthHandler, calls *handlers.CallsHandler, webrtc *handlers.WebRTCHandler, voice *handlers.VoiceHandler, history *handlers.HistoryHandler, jwtService middleware.JWTService) *Router {
 	return &Router{
 		auth:       auth,
 		calls:      calls,
 		webrtc:     webrtc,
+		voice:      voice,
 		history:    history,
 		jwtService: jwtService,
 	}
@@ -48,5 +50,14 @@ func (r *Router) Setup(engine *gin.Engine) {
 			callsGroup.POST("/initiate", r.webrtc.Initiate)
 			callsGroup.POST("/terminate", r.webrtc.Terminate)
 		}
+
+		if r.voice != nil {
+			api.POST("/voice/token", middleware.Auth(r.jwtService), r.voice.Token)
+		}
+	}
+
+	if r.voice != nil {
+		engine.GET("/api/voice/twiml", r.voice.TwiML)
+		engine.POST("/api/voice/twiml", r.voice.TwiML)
 	}
 }
