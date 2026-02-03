@@ -17,3 +17,7 @@ extra_data/
 
 # Go
 backend/bin/
+
+# Go workspace file
+go.work
+go.work.sum
