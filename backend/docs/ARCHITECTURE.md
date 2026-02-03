@@ -120,6 +120,9 @@ start_time TIMESTAMP WITH TIME ZONE NOT NULL
 duration INTEGER DEFAULT 0
 status VARCHAR(20) NOT NULL DEFAULT 'initiated'
 created_at TIMESTAMP WITH TIME ZONE
+session_id VARCHAR(255)
+sdp_offer TEXT
+sdp_answer TEXT
 ```
 
 ### Индексы
@@ -128,6 +131,7 @@ created_at TIMESTAMP WITH TIME ZONE
 - `idx_calls_user_id` ON calls(user_id)
 - `idx_calls_start_time` ON calls(start_time)
 - `idx_calls_user_start` ON calls(user_id, start_time DESC)
+- `idx_calls_session_id` ON calls(session_id)
 
 ### Миграции
 
@@ -168,6 +172,8 @@ created_at TIMESTAMP WITH TIME ZONE
 - POST /api/calls
 - PUT /api/calls/:id
 - GET /api/calls/history
+- POST /api/calls/initiate
+- POST /api/calls/terminate
 
 ### Системные
 - GET /system/health
@@ -180,6 +186,27 @@ created_at TIMESTAMP WITH TIME ZONE
 2. **Repository level:** ошибки БД
 3. **Handler level:** маппинг на HTTP статус коды
 
+### Формат ответов с ошибками
+
+Согласно техническому заданию, все ошибки возвращаются в унифицированном формате:
+
+```json
+{
+  "error": "error_type",
+  "message": "Human readable error description"
+}
+```
+
+Примеры типов ошибок:
+- `validation_error` - ошибка валидации входных данных
+- `unauthorized` - отсутствует или невалидный токен
+- `invalid_credentials` - неверные учетные данные
+- `user_already_exists` - пользователь с таким email уже существует
+- `call_not_found` - звонок не найден
+- `call_initiation_failed` - ошибка инициации звонка
+- `call_termination_failed` - ошибка завершения звонка
+- `history_fetch_error` - ошибка получения истории
+
 ### HTTP статус коды
 
 - 200 OK - успешная операция
@@ -187,9 +214,11 @@ created_at TIMESTAMP WITH TIME ZONE
 - 204 No Content - успешно без тела ответа
 - 400 Bad Request - ошибка валидации
 - 401 Unauthorized - отсутствует или невалидный токен
+- 403 Forbidden - нет прав доступа к ресурсу
 - 404 Not Found - ресурс не найден
 - 409 Conflict - конфликт (например, email уже существует)
 - 500 Internal Server Error - внутренняя ошибка
+- 503 Service Unavailable - внешний сервис недоступен
 
 ## Логирование
 
@@ -227,6 +256,26 @@ created_at TIMESTAMP WITH TIME ZONE
 4. **Single Responsibility:** один use case - одна задача
 5. **Explicit Dependencies:** все зависимости передаются через конструкторы
 
+## WebRTC интеграция
+
+### VoIP сервис
+
+Система поддерживает интеграцию с внешними VoIP провайдерами:
+- Twilio - для production использования
+- Mock - для разработки и тестирования
+
+### Управление сессиями
+
+- Сессии хранятся в памяти через SessionManager
+- Автоматическая очистка истекших сессий каждую минуту
+- Thread-safe операции с сессиями
+
+### WebRTC поля в таблице calls
+
+- `session_id` - идентификатор VoIP сессии
+- `sdp_offer` - SDP offer для установки WebRTC соединения
+- `sdp_answer` - SDP answer от клиента
+
 ## Ограничения текущей реализации
 
 1. JWT токены stateless, logout не инвалидирует токен на сервере
@@ -234,4 +283,5 @@ created_at TIMESTAMP WITH TIME ZONE
 3. Отсутствует rate limiting
 4. Отсутствует кеширование
 5. Пагинация реализована in-memory после получения всех записей
+6. VoIP сессии хранятся только в памяти (теряются при рестарте)
 

@@ -49,7 +49,7 @@ export function History() {
     if (!token) return
     api
       .getHistory(token)
-      .then(setItems)
+      .then((res) => setItems(res.calls))
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setLoading(false))
   }, [token])
@@ -90,9 +90,9 @@ export function History() {
               <tbody>
                 {items.map((item) => (
                   <tr key={item.callId}>
-                    <td>{formatDate(item.startedAt)}</td>
+                    <td>{formatDate(item.startTime)}</td>
                     <td>{item.phoneNumber}</td>
-                    <td>{formatDuration(item.durationSeconds)}</td>
+                    <td>{formatDuration(item.duration)}</td>
                     <td>{getStatusText(item.status, t)}</td>
                   </tr>
                 ))}

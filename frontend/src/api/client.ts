@@ -14,26 +14,41 @@ export interface AuthResponse {
   accessToken: string
 }
 
-export interface StartCallRequest {
-  countryCode: string
-  phoneNumber: string
+export interface InitiateCallRequest {
+  phone_number: string
 }
 
-export interface StartCallResponse {
-  callId: string
-  rtcConfig?: Record<string, unknown>
+export interface InitiateCallResponse {
+  call_id: string
+  session_id: string
+  sdp_offer: string
+  status: string
+  start_time: string
 }
 
-export interface EndCallRequest {
-  callId: string
+export interface TerminateCallRequest {
+  call_id: string
+}
+
+export interface TerminateCallResponse {
+  call_id: string
+  duration: number
+  status: string
 }
 
 export interface CallHistoryItem {
   callId: string
   phoneNumber: string
-  startedAt: string
-  durationSeconds: number
-  status: 'completed' | 'failed' | 'canceled'
+  startTime: string
+  duration: number
+  status: string
+}
+
+export interface HistoryResponse {
+  calls: CallHistoryItem[]
+  total: number
+  page: number
+  limit: number
 }
 
 export interface HealthResponse {
@@ -58,7 +73,8 @@ async function request<T>(
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    throw new Error((err as { error?: string }).error || res.statusText)
+    const body = err as { message?: string; error?: string }
+    throw new Error(body.message || body.error || res.statusText)
   }
   if (res.status === 204) {
     return undefined as T
@@ -68,22 +84,22 @@ async function request<T>(
 
 export const api = {
   register: (body: RegisterRequest) =>
-    request<void>('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
+    request<void>('/api/auth/register', { method: 'POST', body: JSON.stringify(body) }),
 
   login: (body: LoginRequest) =>
-    request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
+    request<AuthResponse>('/api/auth/login', { method: 'POST', body: JSON.stringify(body) }),
 
   logout: (token: string) =>
-    request<void>('/auth/logout', { method: 'POST', token }),
+    request<void>('/api/auth/logout', { method: 'POST', token }),
 
-  startCall: (token: string, body: StartCallRequest) =>
-    request<StartCallResponse>('/calls/start', { method: 'POST', body: JSON.stringify(body), token }),
+  initiateCall: (token: string, body: InitiateCallRequest) =>
+    request<InitiateCallResponse>('/api/calls/initiate', { method: 'POST', body: JSON.stringify(body), token }),
 
-  endCall: (token: string, body: EndCallRequest) =>
-    request<void>('/calls/end', { method: 'POST', body: JSON.stringify(body), token }),
+  terminateCall: (token: string, body: TerminateCallRequest) =>
+    request<TerminateCallResponse>('/api/calls/terminate', { method: 'POST', body: JSON.stringify(body), token }),
 
   getHistory: (token: string) =>
-    request<CallHistoryItem[]>('/calls/history', { token }),
+    request<HistoryResponse>('/api/calls/history', { token }),
 
   health: () => request<HealthResponse>('/system/health'),
 }

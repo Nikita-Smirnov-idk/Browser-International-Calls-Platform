@@ -20,7 +20,10 @@ func NewHistoryHandler(list *history.ListHistoryUseCase) *HistoryHandler {
 func (h *HistoryHandler) List(c *gin.Context) {
 	userID := c.GetString("userID")
 	if userID == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   "unauthorized",
+			"message": "Authentication required",
+		})
 		return
 	}
 
@@ -61,7 +64,10 @@ func (h *HistoryHandler) List(c *gin.Context) {
 	})
 	
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "history_fetch_error",
+			"message": err.Error(),
+		})
 		return
 	}
 	

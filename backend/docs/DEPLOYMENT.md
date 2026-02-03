@@ -30,6 +30,16 @@ JWT_SECRET=<секретный ключ для JWT>
 ```bash
 SERVER_PORT=8080                    # порт сервера (по умолчанию 8080)
 POSTGRES_SSLMODE=disable            # режим SSL для PostgreSQL (по умолчанию disable)
+VOIP_PROVIDER=mock                  # VoIP провайдер: mock или twilio (по умолчанию mock)
+```
+
+### Для WebRTC (при использовании Twilio)
+
+```bash
+VOIP_PROVIDER=twilio
+VOIP_ACCOUNT_SID=<Twilio Account SID>
+VOIP_AUTH_TOKEN=<Twilio Auth Token>
+VOIP_FROM_NUMBER=<Номер телефона в формате +1234567890>
 ```
 
 ## Развертывание через Docker Compose
@@ -163,6 +173,7 @@ Environment="POSTGRES_PASSWORD=<password>"
 Environment="POSTGRES_DB=calls"
 Environment="JWT_SECRET=<secret>"
 Environment="SERVER_PORT=8080"
+Environment="VOIP_PROVIDER=mock"
 
 [Install]
 WantedBy=multi-user.target
@@ -228,6 +239,7 @@ sudo certbot --nginx -d api.example.com
 ```bash
 psql -h localhost -U calls -d calls -f migrations/001_create_users_table.sql
 psql -h localhost -U calls -d calls -f migrations/002_create_calls_table.sql
+psql -h localhost -U calls -d calls -f migrations/003_add_webrtc_fields_to_calls.sql
 ```
 
 ## Мониторинг и логирование

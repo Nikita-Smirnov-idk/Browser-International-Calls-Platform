@@ -22,7 +22,10 @@ func NewCallsHandler(start *calls.StartCallUseCase, end *calls.EndCallUseCase) *
 func (h *CallsHandler) Create(c *gin.Context) {
 	userID := c.GetString("userID")
 	if userID == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   "unauthorized",
+			"message": "Authentication required",
+		})
 		return
 	}
 	
@@ -30,7 +33,10 @@ func (h *CallsHandler) Create(c *gin.Context) {
 		PhoneNumber string `json:"phone_number" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "validation_error",
+			"message": err.Error(),
+		})
 		return
 	}
 
@@ -39,7 +45,10 @@ func (h *CallsHandler) Create(c *gin.Context) {
 		PhoneNumber: req.PhoneNumber,
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "call_creation_error",
+			"message": err.Error(),
+		})
 		return
 	}
 
@@ -55,13 +64,19 @@ func (h *CallsHandler) Create(c *gin.Context) {
 func (h *CallsHandler) Update(c *gin.Context) {
 	userID := c.GetString("userID")
 	if userID == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   "unauthorized",
+			"message": "Authentication required",
+		})
 		return
 	}
 
 	callID := c.Param("id")
 	if callID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "call_id is required"})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "validation_error",
+			"message": "call_id is required",
+		})
 		return
 	}
 
@@ -70,7 +85,10 @@ func (h *CallsHandler) Update(c *gin.Context) {
 		Status   string `json:"status" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "validation_error",
+			"message": err.Error(),
+		})
 		return
 	}
 
@@ -80,12 +98,18 @@ func (h *CallsHandler) Update(c *gin.Context) {
 	})
 	if err != nil {
 		statusCode := http.StatusInternalServerError
+		errorType := "call_update_error"
 		if err.Error() == "call not found" {
 			statusCode = http.StatusNotFound
+			errorType = "call_not_found"
 		} else if err.Error() == "unauthorized" {
 			statusCode = http.StatusUnauthorized
+			errorType = "unauthorized"
 		}
-		c.JSON(statusCode, gin.H{"error": err.Error()})
+		c.JSON(statusCode, gin.H{
+			"error":   errorType,
+			"message": err.Error(),
+		})
 		return
 	}
 

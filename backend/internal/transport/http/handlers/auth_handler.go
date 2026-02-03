@@ -34,7 +34,10 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		Password string `json:"password" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "validation_error",
+			"message": err.Error(),
+		})
 		return
 	}
 	
@@ -44,18 +47,27 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	})
 	if err != nil {
 		statusCode := http.StatusInternalServerError
+		errorType := "registration_error"
 		if strings.Contains(err.Error(), "already exists") {
 			statusCode = http.StatusConflict
+			errorType = "user_already_exists"
 		} else if strings.Contains(err.Error(), "invalid") {
 			statusCode = http.StatusBadRequest
+			errorType = "validation_error"
 		}
-		c.JSON(statusCode, gin.H{"error": err.Error()})
+		c.JSON(statusCode, gin.H{
+			"error":   errorType,
+			"message": err.Error(),
+		})
 		return
 	}
 
 	token, err := h.jwtService.GenerateToken(output.UserID, output.Email)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "token_generation_error",
+			"message": "failed to generate token",
+		})
 		return
 	}
 
@@ -74,7 +86,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		Password string `json:"password" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "validation_error",
+			"message": err.Error(),
+		})
 		return
 	}
 	
@@ -83,7 +98,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		Password: req.Password,
 	})
 	if err != nil || output == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   "invalid_credentials",
+			"message": "Invalid email or password",
+		})
 		return
 	}
 

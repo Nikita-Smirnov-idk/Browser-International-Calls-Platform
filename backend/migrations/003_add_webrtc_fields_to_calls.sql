@@ -1,0 +1,6 @@
+ALTER TABLE calls ADD COLUMN IF NOT EXISTS session_id VARCHAR(255);
+ALTER TABLE calls ADD COLUMN IF NOT EXISTS sdp_offer TEXT;
+ALTER TABLE calls ADD COLUMN IF NOT EXISTS sdp_answer TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_calls_session_id ON calls(session_id);
+

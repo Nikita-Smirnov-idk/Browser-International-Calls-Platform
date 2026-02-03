@@ -71,12 +71,72 @@ paths:
         "204":
           description: Успешный выход
 
+  /calls/initiate:
+    post:
+      tags: [Calls]
+      summary: Инициация звонка через WebRTC
+      description: |
+        Создает запись звонка, инициирует VoIP сессию и возвращает параметры для установки WebRTC-соединения.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InitiateCallRequest"
+      responses:
+        "200":
+          description: Звонок инициирован
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InitiateCallResponse"
+        "400":
+          description: Некорректные данные
+        "401":
+          description: Неавторизован
+        "503":
+          description: VoIP сервис недоступен
+
+  /calls/terminate:
+    post:
+      tags: [Calls]
+      summary: Завершение звонка через WebRTC
+      description: |
+        Завершает активный звонок, закрывает VoIP сессию и обновляет длительность в базе данных.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TerminateCallRequest"
+      responses:
+        "200":
+          description: Звонок завершен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TerminateCallResponse"
+        "400":
+          description: Некорректные данные
+        "401":
+          description: Неавторизован
+        "403":
+          description: Нет прав доступа к этому звонку
+        "404":
+          description: Звонок не найден
+
   /calls/start:
     post:
       tags: [Calls]
-      summary: Инициация звонка
+      summary: Инициация звонка (устаревший endpoint)
+      deprecated: true
       description: |
         Создает запись звонка и возвращает параметры для установки WebRTC-соединения.
+        Используйте /calls/initiate вместо этого endpoint.
       security:
         - bearerAuth: []
       requestBody:
@@ -100,7 +160,10 @@ paths:
   /calls/end:
     post:
       tags: [Calls]
-      summary: Завершение звонка
+      summary: Завершение звонка (устаревший endpoint)
+      deprecated: true
+      description: |
+        Используйте /calls/terminate вместо этого endpoint.
       security:
         - bearerAuth: []
       requestBody:
@@ -181,6 +244,58 @@ components:
         accessToken:
           type: string
           description: JWT токен доступа
+
+    InitiateCallRequest:
+      type: object
+      required: [phone_number]
+      properties:
+        phone_number:
+          type: string
+          description: Номер телефона в международном формате
+          example: "+491512345678"
+
+    InitiateCallResponse:
+      type: object
+      properties:
+        call_id:
+          type: string
+          description: Уникальный идентификатор звонка
+        session_id:
+          type: string
+          description: Идентификатор VoIP сессии
+        sdp_offer:
+          type: string
+          description: SDP offer для установки WebRTC соединения
+        status:
+          type: string
+          enum: [connecting, active]
+          description: Текущий статус звонка
+        start_time:
+          type: string
+          format: date-time
+          description: Время начала звонка
+
+    TerminateCallRequest:
+      type: object
+      required: [call_id]
+      properties:
+        call_id:
+          type: string
+          description: Уникальный идентификатор звонка
+
+    TerminateCallResponse:
+      type: object
+      properties:
+        call_id:
+          type: string
+          description: Уникальный идентификатор звонка
+        duration:
+          type: integer
+          description: Длительность звонка в секундах
+        status:
+          type: string
+          enum: [completed]
+          description: Финальный статус звонка
 
     StartCallRequest:
       type: object

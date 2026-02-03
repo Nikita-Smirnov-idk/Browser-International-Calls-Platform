@@ -9,6 +9,7 @@ import (
 	"github.com/Nikita-Smirnov-idk/Browser-International-Calls-Platform/backend/internal/domain"
 	"github.com/Nikita-Smirnov-idk/Browser-International-Calls-Platform/backend/internal/infrastructure/jwt"
 	"github.com/Nikita-Smirnov-idk/Browser-International-Calls-Platform/backend/internal/infrastructure/postgres"
+	"github.com/Nikita-Smirnov-idk/Browser-International-Calls-Platform/backend/internal/infrastructure/voip"
 	"github.com/Nikita-Smirnov-idk/Browser-International-Calls-Platform/backend/internal/transport/http"
 	"github.com/Nikita-Smirnov-idk/Browser-International-Calls-Platform/backend/internal/transport/http/handlers"
 	"github.com/Nikita-Smirnov-idk/Browser-International-Calls-Platform/backend/internal/use_cases/auth"
@@ -18,11 +19,12 @@ import (
 )
 
 type App struct {
-	userRepo domain.UserRepository
-	callRepo domain.CallRepository
-	router   *http.Router
-	db       *gorm.DB
-	config   *config.Config
+	userRepo   domain.UserRepository
+	callRepo   domain.CallRepository
+	voipClient voip.Client
+	router     *http.Router
+	db         *gorm.DB
+	config     *config.Config
 }
 
 func New(cfg *config.Config) (*App, error) {
@@ -44,6 +46,17 @@ func New(cfg *config.Config) (*App, error) {
 	userRepo := postgres.NewUserRepository(db)
 	callRepo := postgres.NewCallRepository(db)
 
+	voipClient, err := voip.NewClient(&voip.Config{
+		Provider:   cfg.VoIP.Provider,
+		AccountSID: cfg.VoIP.AccountSID,
+		AuthToken:  cfg.VoIP.AuthToken,
+		APIKey:     cfg.VoIP.APIKey,
+		FromNumber: cfg.VoIP.FromNumber,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize voip client: %w", err)
+	}
+
 	jwtService := jwt.NewService(cfg.JWT.Secret)
 
 	registerUC := auth.NewRegisterUseCase(userRepo)
@@ -51,20 +64,24 @@ func New(cfg *config.Config) (*App, error) {
 	logoutUC := auth.NewLogoutUseCase()
 	startCallUC := calls.NewStartCallUseCase(callRepo)
 	endCallUC := calls.NewEndCallUseCase(callRepo)
+	initiateCallUC := calls.NewInitiateCallUseCase(callRepo, voipClient)
+	terminateCallUC := calls.NewTerminateCallUseCase(callRepo, voipClient)
 	listHistoryUC := history.NewListHistoryUseCase(callRepo)
 
 	authHandler := handlers.NewAuthHandler(registerUC, loginUC, logoutUC, jwtService)
 	callsHandler := handlers.NewCallsHandler(startCallUC, endCallUC)
+	webrtcHandler := handlers.NewWebRTCHandler(initiateCallUC, terminateCallUC)
 	historyHandler := handlers.NewHistoryHandler(listHistoryUC)
 
-	router := http.NewRouter(authHandler, callsHandler, historyHandler, jwtService)
+	router := http.NewRouter(authHandler, callsHandler, webrtcHandler, historyHandler, jwtService)
 
 	return &App{
-		userRepo: userRepo,
-		callRepo: callRepo,
-		router:   router,
-		db:       db,
-		config:   cfg,
+		userRepo:   userRepo,
+		callRepo:   callRepo,
+		voipClient: voipClient,
+		router:     router,
+		db:         db,
+		config:     cfg,
 	}, nil
 }
 
@@ -73,6 +90,9 @@ func (a *App) Router() *http.Router {
 }
 
 func (a *App) Close() error {
+	if err := a.voipClient.Close(); err != nil {
+		log.Printf("Error closing VoIP client: %v", err)
+	}
 	return postgres.Close(a.db)
 }
 

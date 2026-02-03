@@ -9,14 +9,16 @@ import (
 type Router struct {
 	auth       *handlers.AuthHandler
 	calls      *handlers.CallsHandler
+	webrtc     *handlers.WebRTCHandler
 	history    *handlers.HistoryHandler
 	jwtService middleware.JWTService
 }
 
-func NewRouter(auth *handlers.AuthHandler, calls *handlers.CallsHandler, history *handlers.HistoryHandler, jwtService middleware.JWTService) *Router {
+func NewRouter(auth *handlers.AuthHandler, calls *handlers.CallsHandler, webrtc *handlers.WebRTCHandler, history *handlers.HistoryHandler, jwtService middleware.JWTService) *Router {
 	return &Router{
 		auth:       auth,
 		calls:      calls,
+		webrtc:     webrtc,
 		history:    history,
 		jwtService: jwtService,
 	}
@@ -43,6 +45,8 @@ func (r *Router) Setup(engine *gin.Engine) {
 			callsGroup.POST("", r.calls.Create)
 			callsGroup.PUT("/:id", r.calls.Update)
 			callsGroup.GET("/history", r.history.List)
+			callsGroup.POST("/initiate", r.webrtc.Initiate)
+			callsGroup.POST("/terminate", r.webrtc.Terminate)
 		}
 	}
 }

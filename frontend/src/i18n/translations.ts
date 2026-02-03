@@ -40,6 +40,10 @@ export const translations = {
     statusCanceled: 'Отменён',
     error: 'Ошибка',
     close: 'Закрыть',
+    searchCountry: 'Поиск страны',
+    noMicrophone: 'Нет доступа к микрофону',
+    allowMicrophone: 'Разрешите доступ к микрофону для звонков',
+    connectionError: 'Ошибка соединения',
   },
   en: {
     appName: 'International Calls',
@@ -82,6 +86,10 @@ export const translations = {
     statusCanceled: 'Canceled',
     error: 'Error',
     close: 'Close',
+    searchCountry: 'Search country',
+    noMicrophone: 'No microphone access',
+    allowMicrophone: 'Allow microphone access for calls',
+    connectionError: 'Connection error',
   },
 } as const
 

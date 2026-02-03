@@ -6,6 +6,8 @@ type CallStatus string
 
 const (
 	CallStatusInitiated CallStatus = "initiated"
+	CallStatusConnecting CallStatus = "connecting"
+	CallStatusActive    CallStatus = "active"
 	CallStatusCompleted CallStatus = "completed"
 	CallStatusFailed    CallStatus = "failed"
 	CallStatusCanceled  CallStatus = "canceled"
@@ -19,4 +21,7 @@ type Call struct {
 	Duration    int
 	Status      CallStatus
 	CreatedAt   time.Time
+	SessionID   string
+	SDPOffer    string
+	SDPAnswer   string
 }
