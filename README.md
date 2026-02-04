@@ -1,6 +1,6 @@
 # Browser-International-Calls-Platform
 
-Запуск всего стека через Docker Compose:
+Запуск всего стека через Docker Compose (для запуска необходимо указать все нужные параметры в .env):
 
 ```bash
 docker-compose up -d
