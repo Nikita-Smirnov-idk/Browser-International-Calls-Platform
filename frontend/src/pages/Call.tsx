@@ -73,8 +73,6 @@ export function Call() {
       setCallId(res.call_id)
 
       if (res.voice_token) {
-        // Twilio Device сам управляет микрофоном — не вызываем startLocalStream,
-        // иначе два getUserMedia конкурируют и звук искажается (шипение)
         const device = new Device(res.voice_token, {
           logLevel: 0,
           codecPreferences: [TwilioCall.Codec.Opus, TwilioCall.Codec.PCMU],
